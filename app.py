@@ -3,6 +3,13 @@ import folium
 from streamlit_folium import st_folium 
 import pandas as pd 
 from ingest import fetch_traffic_speed, fetch_incidents
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+MAP_TILE = os.getenv("MAP_URL", "cartodbpositron")
+MAP_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
 st.set_page_config(page_title="Singapore Traffic Ops Portal", layout="wide")
 st.title("Real-Time Traffic Network & Asset Dashboard")
@@ -26,8 +33,12 @@ with col3:
 
 # map Rendering
 st.subheader("Network Speed Map & Incidents")
-m = folium.Map(location=[1.3521,103.8198], zoom_start=12, tiles="https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3o7y_18780c7deb446dd83162abd59")
-
+m = folium.Map(
+    location=[1.3521, 103.8198],
+    zoom_start=12,
+    tiles=MAP_TILE,
+    attr=MAP_ATTR
+)
 if not speed_df.empty:
     for _, row in speed_df.dropna(subset=["StartLat", "StartLon", "EndLat", "EndLon"]).iterrows():
         speed_band = row.get("SpeedBand", 4)
@@ -42,7 +53,7 @@ if not speed_df.empty:
         ).add_to(m)
 
 if not incidents_df.empty:
-    for_, row in incidents_df.dropna(subset=["Latitude", "Longitude"]).iterrows():
+    for _, row in incidents_df.dropna(subset=["Latitude", "Longitude"]).iterrows():
         folium.Marker(
             location=[row["Latitude"], row["Longitude"]],
             popup=row.get("Message", "Incident"),

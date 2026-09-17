@@ -4,3 +4,4 @@ geopandas
 folium
 streamlit
 streamlit-folium
+python-dotenv

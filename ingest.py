@@ -1,25 +1,39 @@
 import os
 import requests
 import pandas as pd
+from dotenv import load_dotenv
 
-LTA_KEY = "3M8VhbVtSM2QSGu2tG5MwQ=="
+load_dotenv()
+
+LTA_KEY = os.getenv("LTA_API_KEY")
 HEADERS = {"AccountKey": LTA_KEY, "accept": "application/json"}
 
 def fetch_traffic_speed():
     url = "https://datamall2.mytransport.sg/ltaodataservice/v4/TrafficSpeedBands"
-    response = requests.get(url, headers=HEADERS)
+    all_data = []
+    skip = 0
 
-    if response.status_code == 200:
-        data = response.json().get("value", [])
-        df = pd.DataFrame(data)
+    while True:
+        paginated_url = f"{url}?$skip={skip}"
+        response = requests.get(paginated_url, headers=HEADERS)
 
-        for col in ["StartLat", "StartLon", "EndLat", "EndLon"]:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-        return df
-    else:
-        print(f"Error {response.status_code}: {response.text}")
-        return pd.DataFrame()
+        if response.status_code == 200:
+            batch = response.json().get("value", [])
+            if not batch:
+                break
+            all_data.extend(batch)
+            skip += 500
+        else:
+            print(f"Error {response.status_code}: {response.text}")
+            break
+            
+    df = pd.DataFrame(all_data)
+
+    for col in ["StartLat", "StartLon", "EndLat", "EndLon"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
+         
 
 def fetch_incidents():
     url = "https://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents"
