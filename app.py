@@ -19,10 +19,34 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(("Monitored Segments"), len(speed_df))
 with col2: 
-    slow_segments = len(speed_df[speed_df["SpeedBand"] <= 3]) if "SpeedBand" in speed_df.columns else 0
-    st.metric("Congested Segments (<30km/h)", slow_segments)
+    slow_segments = len(speed_df[speed_df["SpeedBand"] <= 2]) if "SpeedBand" in speed_df.columns else 0
+    st.metric("Congested Segments (<20km/h)", slow_segments)
 with col3:
     st.metric("Active Road Incidents", len(incidents_df))
 
 # map Rendering
 st.subheader("Network Speed Map & Incidents")
+m = folium.Map(location=[1.3521,103.8198], zoom_start=12, tiles="https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3o7y_18780c7deb446dd83162abd59")
+
+if not speed_df.empty:
+    for _, row in speed_df.dropna(subset=["StartLat", "StartLon", "EndLat", "EndLon"]).iterrows():
+        speed_band = row.get("SpeedBand", 4)
+        color = "red" if speed_band <=2 else "orange" if speed_band <= 4 else "green"
+
+        folium.PolyLine(
+            locations=[[row["StartLat"], row["StartLon"]], [row["EndLat"], row["EndLon"]]],
+            color=color,
+            weight=4,
+            opacity=0.8,
+            popup=f"Road: {row.get('RoadName', 'N/A')}<br>Speed Band: {speed_band}"
+        ).add_to(m)
+
+if not incidents_df.empty:
+    for_, row in incidents_df.dropna(subset=["Latitude", "Longitude"]).iterrows():
+        folium.Marker(
+            location=[row["Latitude"], row["Longitude"]],
+            popup=row.get("Message", "Incident"),
+            icon=folium.Icon(color="darkred", icon="warning", prefix="fa")
+        ).add_to(m)
+
+st_folium(m, width=1300, height=500)
